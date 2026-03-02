@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPO In-Hospital — UX/UI Review & Improved Prototype</title>
+<style>
+  :root {
+    --primary: #0E6E4E;
+    --primary-light: #E8F5EE;
+    --primary-dark: #094D37;
+    --accent: #F59E0B;
+    --accent-light: #FEF3C7;
+    --danger: #DC2626;
+    --danger-light: #FEE2E2;
+    --info: #2563EB;
+    --info-light: #DBEAFE;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-800: #1F2937;
+    --gray-900: #111827;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--gray-100); color: var(--gray-800); }
+
+  /* === MODE SWITCH === */
+  .mode-switch { display: flex; gap: 0; background: var(--gray-200); border-radius: 8px; padding: 3px; margin-bottom: 24px; max-width: 500px; }
+  .mode-btn { flex:1; padding: 10px 16px; border:none; background: none; border-radius: 6px; cursor:pointer; font-size:14px; font-weight:600; color: var(--gray-500); transition: all .2s; }
+  .mode-btn.active { background: white; color: var(--primary); box-shadow: var(--shadow); }
+  .mode-btn:hover:not(.active) { color: var(--gray-700); }
+
+  /* === REVIEW SECTION === */
+  .review-container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+  .review-header { text-align: center; margin-bottom: 40px; }
+  .review-header h1 { font-size: 28px; color: var(--primary-dark); margin-bottom: 8px; }
+  .review-header p { color: var(--gray-500); font-size: 15px; }
+
+  .section-title { font-size: 20px; font-weight: 700; color: var(--gray-800); margin: 32px 0 16px; display: flex; align-items: center; gap: 10px; }
+  .section-title .badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+  .badge-issue { background: var(--danger-light); color: var(--danger); }
+  .badge-missing { background: var(--accent-light); color: #92400E; }
+  .badge-ok { background: var(--primary-light); color: var(--primary); }
+
+  .issue-card { background: white; border-radius: var(--radius); padding: 20px; margin-bottom: 12px; border-left: 4px solid; box-shadow: var(--shadow); }
+  .issue-card.critical { border-color: var(--danger); }
+  .issue-card.warning { border-color: var(--accent); }
+  .issue-card.improvement { border-color: var(--info); }
+  .issue-card h4 { font-size: 15px; margin-bottom: 6px; }
+  .issue-card p { font-size: 13px; color: var(--gray-600); line-height: 1.6; }
+  .issue-tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:4px; margin-right:6px; font-weight:600; }
+  .tag-critical { background: var(--danger-light); color: var(--danger); }
+  .tag-warning { background: var(--accent-light); color: #92400E; }
+  .tag-info { background: var(--info-light); color: var(--info); }
+
+  .flow-diagram { background: white; border-radius: var(--radius); padding: 24px; margin: 24px 0; box-shadow: var(--shadow); overflow-x: auto; }
+  .flow-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; flex-wrap: nowrap; min-width: 900px; }
+  .flow-step { padding: 10px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; text-align: center; min-width: 120px; }
+  .flow-arrow { color: var(--gray-400); font-size: 18px; flex-shrink: 0; }
+  .flow-jv { background: #DBEAFE; color: #1E40AF; }
+  .flow-hospital { background: #F3E8FF; color: #6B21A8; }
+  .flow-logistics { background: #FEF3C7; color: #92400E; }
+  .flow-new { background: #DCFCE7; color: #166534; border: 2px dashed #16A34A; }
+  .flow-label { font-size: 11px; color: var(--gray-400); text-align: center; width: 100%; margin-bottom: 4px; }
+
+  /* === PROTOTYPE === */
+  .proto-container { display: flex; height: 100vh; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; background: var(--primary-dark); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+  .sidebar-logo .logo-icon { width: 36px; height: 36px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-weight: 800; font-size: 14px; }
+  .sidebar-logo span { font-weight: 700; font-size: 15px; }
+
+  .sidebar-role { padding: 12px 20px; background: rgba(255,255,255,0.08); margin: 12px; border-radius: 8px; font-size: 12px; }
+  .sidebar-role .role-name { font-weight: 700; font-size: 13px; color: #A7F3D0; }
+
+  .sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+  .nav-group { margin-bottom: 8px; }
+  .nav-group-label { padding: 8px 20px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; font-size: 13px; color: rgba(255,255,255,0.7); transition: all .15s; position: relative; }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+  .nav-item.active { background: rgba(255,255,255,0.12); color: white; font-weight: 600; }
+  .nav-item.active::before { content:''; position:absolute; left:0; top:4px; bottom:4px; width:3px; background: #34D399; border-radius: 0 3px 3px 0; }
+  .nav-item .nav-icon { width: 18px; text-align: center; font-size: 15px; }
+  .nav-badge { margin-left: auto; background: var(--danger); color: white; font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 700; }
+  .nav-badge.info { background: var(--info); }
+
+  /* Main content */
+  .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { height: 56px; background: white; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; padding: 0 24px; gap: 16px; flex-shrink: 0; }
+  .topbar-search { flex:1; max-width: 400px; position: relative; }
+  .topbar-search input { width:100%; padding: 8px 12px 8px 36px; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 13px; background: var(--gray-50); }
+  .topbar-search::before { content:'🔍'; position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:14px; }
+  .topbar-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+  .topbar-btn { width:36px; height:36px; border-radius:8px; border:none; background: var(--gray-100); cursor:pointer; font-size:16px; position:relative; }
+  .topbar-btn .dot { position:absolute; top:6px; right:6px; width:8px; height:8px; background:var(--danger); border-radius:50%; border:2px solid white; }
+  .topbar-user { display:flex; align-items:center; gap:8px; padding:4px 12px 4px 4px; border-radius:20px; background:var(--gray-100); }
+  .topbar-user .avatar { width:28px; height:28px; background:var(--primary); border-radius:50%; color:white; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+  .topbar-user span { font-size:13px; font-weight:500; }
+
+  .content { flex:1; overflow-y:auto; padding: 24px; background: var(--gray-50); }
+
+  /* Cards & Tables */
+  .page-title { font-size: 22px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
+  .page-subtitle { font-size: 13px; color: var(--gray-500); margin-bottom: 20px; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: white; border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); }
+  .stat-card .stat-label { font-size: 12px; color: var(--gray-500); margin-bottom: 4px; }
+  .stat-card .stat-value { font-size: 24px; font-weight: 700; color: var(--gray-900); }
+  .stat-card .stat-change { font-size: 11px; margin-top: 4px; }
+  .stat-change.up { color: #16A34A; }
+  .stat-change.down { color: var(--danger); }
+
+  .card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; }
+  .card-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; }
+  .card-header h3 { font-size: 15px; font-weight: 700; }
+  .card-body { padding: 20px; }
+
+  table { width:100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-500); background: var(--gray-50); border-bottom: 1px solid var(--gray-200); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+  tr:hover td { background: var(--gray-50); }
+
+  .status-pill { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .status-pending { background:#FEF3C7; color:#92400E; }
+  .status-approved { background:#DCFCE7; color:#166534; }
+  .status-rejected { background:#FEE2E2; color:#991B1B; }
+  .status-shipping { background:#DBEAFE; color:#1E40AF; }
+  .status-delivered { background:#D1FAE5; color:#065F46; }
+  .status-draft { background:var(--gray-100); color:var(--gray-600); }
+
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: var(--gray-100); color: var(--gray-700); }
+  .btn-secondary:hover { background: var(--gray-200); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-danger { background: var(--danger-light); color: var(--danger); }
+  .btn-accent { background: var(--accent); color: white; }
+
+  /* Recommend card */
+  .recommend-banner { background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%); border: 1px solid #A7F3D0; border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; }
+  .recommend-banner .rec-icon { font-size: 28px; }
+  .recommend-banner .rec-text h4 { font-size: 14px; color: #065F46; margin-bottom: 2px; }
+  .recommend-banner .rec-text p { font-size: 12px; color: #047857; }
+
+  /* Delivery tracker */
+  .tracker { display: flex; align-items: center; gap: 0; margin: 16px 0; }
+  .tracker-step { text-align: center; flex: 1; position: relative; }
+  .tracker-step .step-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin: 0 auto 6px; position: relative; z-index: 1; }
+  .tracker-step .step-label { font-size: 10px; color: var(--gray-500); }
+  .tracker-step .step-time { font-size: 9px; color: var(--gray-400); }
+  .tracker-step.done .step-dot { background: var(--primary); color: white; }
+  .tracker-step.active .step-dot { background: var(--info); color: white; box-shadow: 0 0 0 4px rgba(37,99,235,0.2); }
+  .tracker-step.pending .step-dot { background: var(--gray-200); color: var(--gray-400); }
+  .tracker-line { flex: 1; height: 3px; background: var(--gray-200); margin: 0 -4px; margin-bottom: 24px; }
+  .tracker-line.done { background: var(--primary); }
+  .tracker-line.active { background: linear-gradient(90deg, var(--primary), var(--gray-200)); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--gray-200); margin-bottom: 20px; }
+  .tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--gray-500); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; }
+  .tab.active { color: var(--primary); border-color: var(--primary); }
+  .tab:hover:not(.active) { color: var(--gray-700); }
+
+  .hidden { display: none !important; }
+
+  /* View toggle */
+  .view-toggle { display: flex; gap: 4px; }
+  .view-toggle button { padding: 6px 12px; border: 1px solid var(--gray-200); background: white; font-size: 12px; cursor:pointer; }
+  .view-toggle button:first-child { border-radius: 6px 0 0 6px; }
+  .view-toggle button:last-child { border-radius: 0 6px 6px 0; }
+  .view-toggle button.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+  /* Recommend table highlight */
+  .rec-row { background: #F0FDF4 !important; }
+  .rec-row td { background: #F0FDF4 !important; }
+  .rec-icon-sm { display:inline-block; width:16px; height:16px; background: #16A34A; color:white; border-radius:50%; font-size:9px; line-height:16px; text-align:center; margin-right:4px; }
+
+  /* Modal */
+  .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:1000; display:flex; align-items:center; justify-content:center; }
+  .modal { background:white; border-radius:12px; width:90%; max-width:600px; max-height:80vh; overflow-y:auto; box-shadow: var(--shadow-lg); }
+  .modal-header { padding:16px 20px; border-bottom:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; }
+  .modal-header h3 { font-size:16px; }
+  .modal-body { padding:20px; }
+  .modal-footer { padding:12px 20px; border-top:1px solid var(--gray-200); display:flex; justify-content:flex-end; gap:8px; }
+  .close-btn { background:none; border:none; font-size:20px; cursor:pointer; color:var(--gray-400); }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { display:block; font-size:12px; font-weight:600; color:var(--gray-600); margin-bottom:4px; }
+  .form-input { width:100%; padding:8px 12px; border:1px solid var(--gray-200); border-radius:8px; font-size:13px; }
+  .form-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(14,110,78,0.1); }
+
+  /* Animation */
+  @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .animate-in { animation: slideIn .3s ease; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { width: 60px; }
+    .sidebar-logo span, .nav-item span, .sidebar-role, .nav-group-label { display: none; }
+    .nav-item { justify-content: center; padding: 12px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- MODE SWITCH -->
+  <div class="review-container" id="reviewMode">
+    <div class="review-header">
+      <h1>🏥 GPO In-Hospital — UX/UI Review & Redesign</h1>
+      <p>การวิเคราะห์การออกแบบปัจจุบันและแนวทางปรับปรุง</p>
+    </div>
+
+    <div class="mode-switch">
+      <button class="mode-btn active" onclick="showMode('review')">📋 UX Review</button>
+      <button class="mode-btn" onclick="showMode('jv')">💻 Prototype: JV Admin</button>
+      <button class="mode-btn" onclick="showMode('hospital')">🏥 Prototype: Hospital</button>
+    </div>
+
+    <!-- ==================== UX REVIEW ==================== -->
+    <div id="review-content">
+      <div class="section-title">🔍 สรุปภาพรวมจากการออกแบบปัจจุบัน</div>
+      <div class="flow-diagram">
+        <div class="flow-label">Flow ปัจจุบัน (จาก Figma)</div>
+        <div class="flow-row">
+          <div class="flow-step flow-jv">1. JV Admin<br>เพิ่ม ร.พ.</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-jv">2. สร้าง User<br>& Password</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-hospital">3. Requester<br>สร้างรายการ</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-hospital">4. Approver<br>อนุมัติ</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-jv">5. JV Admin<br>อนุมัติ</div>
+        </div>
+      </div>
+
+      <!-- Critical Issues -->
+      <div class="section-title">🚨 ปัญหาร้ายแรง (Critical Issues) <span class="badge badge-issue">6 รายการ</span></div>
+
+      <div class="issue-card critical">
+        <h4><span class="issue-tag tag-critical">CRITICAL</span> ไม่มีระบบติดตามสถานะการจัดส่ง (Delivery Tracking)</h4>
+        <p>การออกแบบปัจจุบันจบที่ "JV Admin อนุมัติ" แต่ไม่มี flow สำหรับการจัดเตรียมสินค้า, จัดส่ง, และการรับสินค้าที่โรงพยาบาล ทำให้โรงพยาบาลไม่สามารถตรวจสอบได้ว่ายาจะมาถึงเมื่อไหร่</p>
+      </div>
+
+      <div class="issue-card critical">
+        <h4><span class="issue-tag tag-critical">CRITICAL</span> ไม่มีระบบ Recommended Order จากข้อมูลซื้อในอดีต</h4>
+        <p>ตามที่ระบุว่าจะได้รับ DATA การซื้อในอดีตของ ร.พ. แต่ไม่มี Feature สำหรับวิเคราะห์ข้อมูลเพื่อแนะนำการสั่งซื้อ หรือเตรียม Stock ล่วงหน้า ซึ่งเป็นจุดขายสำคัญของระบบ</p>
+      </div>
+
+      <div class="issue-card critical">
+        <h4><span class="issue-tag tag-critical">CRITICAL</span> ไม่มี Dashboard ภาพรวมสำหรับทั้ง 2 ฝั่ง</h4>
+        <p>ทั้ง JV Admin และ Hospital ไม่มีหน้า Dashboard ที่แสดงสถานะรวม เช่น จำนวน PO รอดำเนินการ, ยอดขายรวม, สินค้าที่ใกล้หมด Stock ทำให้ต้องเข้าไปดูทีละหน้า</p>
+      </div>
+
+      <div class="issue-card critical">
+        <h4><span class="issue-tag tag-critical">CRITICAL</span> ไม่มี Role สำหรับ Logistics / Warehouse</h4>
+        <p>ระบบขาด Role สำหรับจัดการคลังสินค้าและการจัดส่ง ซึ่งจำเป็นต่อการทำงานจริง เช่น การรับ PO → จัดเตรียมสินค้า → ส่งออก → ยืนยันรับ</p>
+      </div>
+
+      <div class="issue-card critical">
+        <h4><span class="issue-tag tag-critical">CRITICAL</span> Flow การสร้าง User ผ่าน "ระบบภายนอก" ไม่ชัดเจน</h4>
+        <p>ระบุว่าต้องติดต่อ Dev จัดทำ ซึ่งไม่ scalable และเป็นคอขวด ควรให้ JV Admin สามารถสร้าง User และจัดการ Role ได้เองผ่านระบบ</p>
+      </div>
+
+      <div class="issue-card critical">
+        <h4><span class="issue-tag tag-critical">CRITICAL</span> ไม่มี Notification System</h4>
+        <p>ไม่มีระบบแจ้งเตือนเมื่อมี PO ใหม่, PO ถูก approve/reject, สินค้าจัดส่งแล้ว ฯลฯ ทำให้ต้อง login มาเช็คเอง</p>
+      </div>
+
+      <!-- Warning Issues -->
+      <div class="section-title">⚠️ ปัญหาที่ควรแก้ไข (UX Issues) <span class="badge badge-missing">5 รายการ</span></div>
+
+      <div class="issue-card warning">
+        <h4><span class="issue-tag tag-warning">UX</span> ตารางข้อมูลยาวเกินไป ไม่มี Pagination / Filter ที่ดี</h4>
+        <p>ตารางสินค้าและ PO Report ไม่มี search, filter ตามประเภทสินค้า, ช่วงวันที่ หรือ pagination ทำให้หา item ที่ต้องการลำบากเมื่อมีข้อมูลมาก</p>
+      </div>
+
+      <div class="issue-card warning">
+        <h4><span class="issue-tag tag-warning">UX</span> ขาดความสม่ำเสมอของ UI Pattern</h4>
+        <p>หน้าจอแต่ละส่วนมี layout ที่แตกต่างกัน เช่น ปุ่ม action อยู่คนละตำแหน่ง, ตารางมีรูปแบบไม่เหมือนกัน ทำให้ผู้ใช้สับสน</p>
+      </div>
+
+      <div class="issue-card warning">
+        <h4><span class="issue-tag tag-warning">UX</span> ไม่มี Confirmation Dialog ก่อนทำ action สำคัญ</h4>
+        <p>การ approve/reject PO ควรมี dialog ยืนยัน พร้อมช่องใส่เหตุผล (โดยเฉพาะ reject) เพื่อป้องกันการกดผิดและเก็บ audit trail</p>
+      </div>
+
+      <div class="issue-card warning">
+        <h4><span class="issue-tag tag-warning">UX</span> Mobile Responsive ไม่ชัดเจน</h4>
+        <p>การออกแบบดูเหมือนเน้น Desktop เท่านั้น ทั้งที่ผู้ใช้ฝั่ง Hospital อาจใช้ Tablet หรือ Mobile ในการตรวจสอบสถานะ</p>
+      </div>
+
+      <div class="issue-card warning">
+        <h4><span class="issue-tag tag-warning">UX</span> ไม่มี Empty State / Error State</h4>
+        <p>ไม่มีการออกแบบสำหรับกรณีที่ไม่มีข้อมูล หรือเกิด error ทำให้ผู้ใช้ไม่รู้ว่าต้องทำอะไรต่อ</p>
+      </div>
+
+      <!-- Proposed New Flow -->
+      <div class="section-title">✅ Flow ที่แนะนำใหม่ (Improved) <span class="badge badge-ok">สมบูรณ์</span></div>
+      <div class="flow-diagram">
+        <div class="flow-label">Flow ใหม่ — เพิ่มครบทุก Feature ที่จำเป็น</div>
+        <div class="flow-row" style="margin-bottom:8px">
+          <div class="flow-step flow-jv">1. JV Admin<br>จัดการ ร.พ.</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-jv">2. JV Admin<br>สร้าง User/Role</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-new">3. AI แนะนำ<br>Reorder</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-hospital">4. Requester<br>สร้าง/แก้ไข PO</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-hospital">5. Approver<br>อนุมัติ PO</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-step" style="min-width:120px; visibility:hidden">spacer</div>
+          <div class="flow-arrow" style="visibility:hidden">→</div>
+          <div class="flow-step flow-jv">6. JV Admin<br>รับ & ยืนยัน PO</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-logistics">7. Warehouse<br>จัดเตรียมสินค้า</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-logistics">8. Logistics<br>จัดส่ง + Tracking</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step flow-hospital">9. ร.พ. รับสินค้า<br>& ยืนยัน</div>
+        </div>
+      </div>
+
+      <!-- Data Structure -->
+      <div class="section-title">🔗 โครงสร้างรหัสสินค้า (จำเป็นสำหรับ Data Integration)</div>
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-body" style="padding:16px 20px;">
+          <table style="font-size:13px;">
+            <tr style="background:var(--primary-light);"><th style="width:180px;">Field</th><th style="width:200px;">ตัวอย่าง</th><th>คำอธิบาย</th><th>ที่มา / ใช้เชื่อมกับ</th></tr>
+            <tr><td><strong>GPU ID</strong></td><td>23231234</td><td>รหัสสินค้าจาก GPO (องค์การเภสัชกรรม)</td><td>ระบบ GPO — ใช้อ้างอิงสินค้ากับ GPO ส่วนกลาง</td></tr>
+            <tr><td><strong>TPU ID</strong></td><td>123123123</td><td>รหัสจาก Thai Pharmaceutical Unit</td><td>ฐานข้อมูล TPU — มาตรฐานรหัสยาแห่งชาติ</td></tr>
+            <tr><td><strong>Internal ID</strong></td><td>110100350112</td><td>รหัสภายในระบบ JV / โรงพยาบาล</td><td>ระบบ ERP / HIS ของแต่ละโรงพยาบาล</td></tr>
+            <tr><td><strong>Trade Name</strong></td><td>Zyloprim</td><td>ชื่อการค้าของยา</td><td>ชื่อที่จดทะเบียนจำหน่าย</td></tr>
+            <tr><td><strong>Generic Name</strong></td><td>ALLOPURINOL</td><td>ชื่อสามัญทางยา (ตัวยาสำคัญ)</td><td>มาตรฐาน WHO / INN</td></tr>
+            <tr><td><strong>Dosage Form</strong></td><td>TAB, CAP, INJ, INH</td><td>รูปแบบยา: เม็ด, แคปซูล, ฉีด, สูดพ่น</td><td>TAB=Tablet, CAP=Capsule, INJ=Injection, INH=Inhaler, SYR=Syrup, CRM=Cream</td></tr>
+            <tr><td><strong>Strength/Dose</strong></td><td>100mg, 0.9% 1000ml</td><td>ความแรง/ขนาดยา</td><td>ข้อมูลจาก GPU/TPU</td></tr>
+            <tr><td><strong>Packaging</strong></td><td>50×10's, 14's, 1's</td><td>บรรจุภัณฑ์ (จำนวนต่อหน่วยนับ)</td><td>50×10's = 50 แผง แผงละ 10 เม็ด</td></tr>
+            <tr><td><strong>Based Unit of Measure</strong></td><td>BOX, BAG, CAN, BTL</td><td>หน่วยนับพื้นฐานสำหรับสั่งซื้อ</td><td>BOX=กล่อง, BAG=ถุง, CAN=กระป๋อง, BTL=ขวด, TUB=หลอด, AMP=แอมพูล, VIA=ขวดฉีด</td></tr>
+            <tr><td><strong>Unrestricted Stock</strong></td><td>200 (ROP: 80)</td><td>Stock คงเหลือ + จุดสั่งซื้อใหม่ (Reorder Point)</td><td>ข้อมูลจากคลัง JV / โรงพยาบาล</td></tr>
+            <tr><td><strong>EXP</strong></td><td>30/11/69</td><td>วันหมดอายุ (Lot เร็วที่สุด)</td><td>ระบบ Lot Tracking — FEFO (First Expired, First Out)</td></tr>
+            <tr><td><strong style="color:var(--primary)">GPO Avail. Stock</strong></td><td style="color:var(--primary);font-weight:700">200</td><td>Stock ที่ GPO มีพร้อมจำหน่ายให้ ร.พ.</td><td>Realtime จาก GPO — ร.พ. เห็นว่าสั่งได้เท่าไหร่</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Feature Summary -->
+      <div class="section-title">🆕 Feature ใหม่ที่เพิ่มเข้ามา</div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:12px;">
+        <div class="issue-card improvement" style="border-color:var(--primary)">
+          <h4>📊 Dashboard ภาพรวม (ทั้ง 2 ฝั่ง)</h4>
+          <p>JV เห็นยอดขาย, PO รอดำเนินการ, Stock level | Hospital เห็นสถานะ PO, ประวัติสั่งซื้อ, ยาใกล้หมด</p>
+        </div>
+        <div class="issue-card improvement" style="border-color:var(--primary)">
+          <h4>🤖 AI Recommended Order</h4>
+          <p>วิเคราะห์ข้อมูลซื้อในอดีตของแต่ละ ร.พ. → แนะนำรายการสั่งซื้อ + ปริมาณที่เหมาะสม + ช่วงเวลาที่ควรสั่ง</p>
+        </div>
+        <div class="issue-card improvement" style="border-color:var(--primary)">
+          <h4>📦 Stock Management</h4>
+          <p>JV จัดเตรียม Stock ล่วงหน้าตาม forecast | Hospital เห็น Stock ปัจจุบันของ JV แบบ realtime</p>
+        </div>
+        <div class="issue-card improvement" style="border-color:var(--primary)">
+          <h4>🚚 Delivery Tracking</h4>
+          <p>ติดตามสถานะจัดส่งแบบ realtime: จัดเตรียม → กำลังส่ง → ถึงปลายทาง → รับสินค้าแล้ว</p>
+        </div>
+        <div class="issue-card improvement" style="border-color:var(--primary)">
+          <h4>🔔 Notification Center</h4>
+          <p>แจ้งเตือน: PO ใหม่, PO approved/rejected, สินค้าจัดส่ง, สินค้า Stock ต่ำ, Reorder reminder</p>
+        </div>
+        <div class="issue-card improvement" style="border-color:var(--primary)">
+          <h4>👥 User & Role Management</h4>
+          <p>JV Admin จัดการ User ได้เอง: สร้าง/ลบ User, กำหนด Role, กำหนดสิทธิ์การเข้าถึง</p>
+        </div>
+      </div>
+
+      <div style="text-align:center; margin: 40px 0 20px; padding: 20px; background: white; border-radius: var(--radius); box-shadow: var(--shadow);">
+        <p style="font-size:15px; color: var(--gray-600); margin-bottom: 12px;">👆 กดปุ่มด้านบนเพื่อดู Interactive Prototype ของแต่ละฝั่ง</p>
+        <div class="mode-switch" style="justify-content:center; max-width:500px; margin:0 auto;">
+          <button class="mode-btn" onclick="showMode('jv')">💻 JV Admin Prototype</button>
+          <button class="mode-btn" onclick="showMode('hospital')">🏥 Hospital Prototype</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JV ADMIN PROTOTYPE ==================== -->
+  <div id="jvMode" class="hidden">
+    <div class="proto-container">
+      <div class="sidebar">
+        <div class="sidebar-logo"><div class="logo-icon">GPO</div><span>GPO In-Hospital</span></div>
+        <div class="sidebar-role"><div class="role-name">JV Admin</div>บจก. จีพีโอ เจวี</div>
+        <nav class="sidebar-nav">
+          <div class="nav-group">
+            <div class="nav-group-label">หลัก</div>
+            <div class="nav-item active" onclick="showJVPage('dashboard')"><span class="nav-icon">📊</span><span>Dashboard</span></div>
+            <div class="nav-item" onclick="showJVPage('orders')"><span class="nav-icon">📋</span><span>คำสั่งซื้อ (PO)</span><span class="nav-badge">12</span></div>
+            <div class="nav-item" onclick="showJVPage('recommend')"><span class="nav-icon">🤖</span><span>แนะนำคำสั่งซื้อ</span><span class="nav-badge info">5</span></div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-label">จัดการ</div>
+            <div class="nav-item" onclick="showJVPage('stock')"><span class="nav-icon">📦</span><span>Stock สินค้า</span></div>
+            <div class="nav-item" onclick="showJVPage('delivery')"><span class="nav-icon">🚚</span><span>การจัดส่ง</span></div>
+            <div class="nav-item" onclick="showJVPage('hospitals')"><span class="nav-icon">🏥</span><span>โรงพยาบาล</span></div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-label">ระบบ</div>
+            <div class="nav-item" onclick="showJVPage('users')"><span class="nav-icon">👥</span><span>จัดการ User</span></div>
+            <div class="nav-item"><span class="nav-icon">📈</span><span>รายงาน</span></div>
+            <div class="nav-item"><span class="nav-icon">⚙️</span><span>ตั้งค่า</span></div>
+          </div>
+        </nav>
+      </div>
+      <div class="main-area">
+        <div class="topbar">
+          <button class="btn btn-secondary btn-sm" onclick="showMode('review')" style="font-size:11px;">← กลับ Review</button>
+          <div class="topbar-search"><input placeholder="ค้นหา PO, โรงพยาบาล, สินค้า..."></div>
+          <div class="topbar-actions">
+            <button class="topbar-btn">🔔<span class="dot"></span></button>
+            <div class="topbar-user"><div class="avatar">JV</div><span>Admin</span></div>
+          </div>
+        </div>
+        <div class="content" id="jv-content">
+          <!-- JV Dashboard (default) -->
+          <div id="jv-dashboard" class="animate-in">
+            <div class="page-title">Dashboard</div>
+            <div class="page-subtitle">ภาพรวมการดำเนินงานวันนี้ — 25 ก.พ. 2569</div>
+            <div class="stats-row">
+              <div class="stat-card"><div class="stat-label">PO รอดำเนินการ</div><div class="stat-value" style="color:var(--accent)">12</div><div class="stat-change down">+3 จากเมื่อวาน</div></div>
+              <div class="stat-card"><div class="stat-label">กำลังจัดส่ง</div><div class="stat-value" style="color:var(--info)">8</div><div class="stat-change">4 จะถึงวันนี้</div></div>
+              <div class="stat-card"><div class="stat-label">ยอดขายเดือนนี้</div><div class="stat-value">฿4.2M</div><div class="stat-change up">↑ 12% จากเดือนก่อน</div></div>
+              <div class="stat-card"><div class="stat-label">โรงพยาบาลที่ใช้งาน</div><div class="stat-value">47</div><div class="stat-change up">+2 ร.พ. ใหม่</div></div>
+            </div>
+
+            <div class="recommend-banner">
+              <div class="rec-icon">🤖</div>
+              <div class="rec-text" style="flex:1">
+                <h4>AI แนะนำ: 5 โรงพยาบาลควรสั่งซื้อเพิ่มภายในสัปดาห์นี้</h4>
+                <p>จากการวิเคราะห์ข้อมูลการซื้อที่ผ่านมาและ Stock ปัจจุบัน</p>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="showJVPage('recommend')">ดูรายละเอียด →</button>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h3>📋 PO ล่าสุดที่รอดำเนินการ</h3><button class="btn btn-secondary btn-sm" onclick="showJVPage('orders')">ดูทั้งหมด</button></div>
+              <div class="card-body" style="padding:0">
+                <table>
+                  <tr><th>PO #</th><th>โรงพยาบาล</th><th>จำนวนรายการ</th><th>มูลค่า</th><th>สถานะ</th><th>วันที่</th></tr>
+                  <tr><td>PO-2569-0234</td><td>ร.พ. ราชวิถี</td><td>15 รายการ</td><td>฿342,500</td><td><span class="status-pill status-pending">⏳ รออนุมัติ</span></td><td>25 ก.พ. 69</td></tr>
+                  <tr><td>PO-2569-0233</td><td>ร.พ. ศิริราช</td><td>23 รายการ</td><td>฿891,200</td><td><span class="status-pill status-pending">⏳ รออนุมัติ</span></td><td>25 ก.พ. 69</td></tr>
+                  <tr><td>PO-2569-0232</td><td>ร.พ. จุฬาลงกรณ์</td><td>8 รายการ</td><td>฿156,800</td><td><span class="status-pill status-approved">✓ อนุมัติแล้ว</span></td><td>24 ก.พ. 69</td></tr>
+                  <tr><td>PO-2569-0231</td><td>ร.พ. รามาธิบดี</td><td>12 รายการ</td><td>฿478,300</td><td><span class="status-pill status-shipping">📦 กำลังจัดส่ง</span></td><td>24 ก.พ. 69</td></tr>
+                </table>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div class="card">
+                <div class="card-header"><h3>⚠️ สินค้า Stock ต่ำ</h3></div>
+                <div class="card-body" style="padding:0">
+                  <table>
+                    <tr><th>GPU ID</th><th>Trade Name</th><th>Strength</th><th>Stock / ROP</th><th>สถานะ</th></tr>
+                    <tr><td style="font-size:11px;color:var(--gray-500)">23231234</td><td>Zyloprim</td><td>100mg</td><td style="color:var(--danger);font-weight:700">20 / ROP:80 BOX</td><td><span class="status-pill status-rejected">วิกฤต</span></td></tr>
+                    <tr><td style="font-size:11px;color:var(--gray-500)">23231456</td><td>Augmentin</td><td>625mg</td><td style="color:var(--accent);font-weight:600">45 / ROP:100 BOX</td><td><span class="status-pill status-pending">ใกล้หมด</span></td></tr>
+                    <tr><td style="font-size:11px;color:var(--gray-500)">23231789</td><td>NSS 0.9%</td><td>1000ml</td><td style="color:var(--accent);font-weight:600">80 / ROP:150 BAG</td><td><span class="status-pill status-pending">ใกล้หมด</span></td></tr>
+                  </table>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>🚚 การจัดส่งวันนี้</h3></div>
+                <div class="card-body" style="padding:0">
+                  <table>
+                    <tr><th>PO #</th><th>ร.พ.</th><th>สถานะ</th></tr>
+                    <tr><td>PO-0228</td><td>ร.พ. พระมงกุฎ</td><td><span class="status-pill status-delivered">✓ ส่งถึงแล้ว</span></td></tr>
+                    <tr><td>PO-0229</td><td>ร.พ. ภูมิพล</td><td><span class="status-pill status-shipping">🚚 กำลังส่ง</span></td></tr>
+                    <tr><td>PO-0231</td><td>ร.พ. รามาธิบดี</td><td><span class="status-pill status-shipping">📦 เตรียมของ</span></td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- JV Orders -->
+          <div id="jv-orders" class="hidden animate-in">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <div><div class="page-title">คำสั่งซื้อ (Purchase Orders)</div><div class="page-subtitle">จัดการ PO จากโรงพยาบาลทั้งหมด</div></div>
+              <div style="display:flex; gap:8px;">
+                <select class="form-input" style="width:auto; font-size:12px;"><option>ทุกสถานะ</option><option>รออนุมัติ</option><option>อนุมัติแล้ว</option><option>กำลังจัดส่ง</option></select>
+                <select class="form-input" style="width:auto; font-size:12px;"><option>ทุกโรงพยาบาล</option><option>ร.พ. ราชวิถี</option><option>ร.พ. ศิริราช</option></select>
+                <input type="date" class="form-input" style="width:auto; font-size:12px;">
+                <button class="btn btn-primary btn-sm">📥 Export</button>
+              </div>
+            </div>
+
+            <div class="tabs">
+              <div class="tab active">ทั้งหมด (45)</div>
+              <div class="tab">รออนุมัติ (12)</div>
+              <div class="tab">อนุมัติแล้ว (8)</div>
+              <div class="tab">กำลังจัดส่ง (15)</div>
+              <div class="tab">เสร็จสิ้น (10)</div>
+            </div>
+
+            <div class="card">
+              <div class="card-body" style="padding:0">
+                <table>
+                  <tr><th>PO #</th><th>โรงพยาบาล</th><th>Requester</th><th>รายการ</th><th>มูลค่ารวม</th><th>วันที่สร้าง</th><th>สถานะ</th><th>Action</th></tr>
+                  <tr>
+                    <td style="font-weight:600; color:var(--primary)">PO-2569-0234</td>
+                    <td>ร.พ. ราชวิถี</td><td>คุณสมชาย ก.</td><td>15 รายการ</td><td>฿342,500</td><td>25 ก.พ. 69</td>
+                    <td><span class="status-pill status-pending">⏳ รออนุมัติ</span></td>
+                    <td><button class="btn btn-primary btn-sm">ตรวจสอบ</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600; color:var(--primary)">PO-2569-0233</td>
+                    <td>ร.พ. ศิริราช</td><td>คุณวิภา น.</td><td>23 รายการ</td><td>฿891,200</td><td>25 ก.พ. 69</td>
+                    <td><span class="status-pill status-pending">⏳ รออนุมัติ</span></td>
+                    <td><button class="btn btn-primary btn-sm">ตรวจสอบ</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600">PO-2569-0232</td>
+                    <td>ร.พ. จุฬาลงกรณ์</td><td>คุณนภา ส.</td><td>8 รายการ</td><td>฿156,800</td><td>24 ก.พ. 69</td>
+                    <td><span class="status-pill status-approved">✓ อนุมัติแล้ว</span></td>
+                    <td><button class="btn btn-secondary btn-sm">ดูรายละเอียด</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600">PO-2569-0231</td>
+                    <td>ร.พ. รามาธิบดี</td><td>คุณประภาส ท.</td><td>12 รายการ</td><td>฿478,300</td><td>24 ก.พ. 69</td>
+                    <td><span class="status-pill status-shipping">🚚 กำลังจัดส่ง</span></td>
+                    <td><button class="btn btn-secondary btn-sm">ติดตาม</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600">PO-2569-0229</td>
+                    <td>ร.พ. ภูมิพล</td><td>คุณกิตติ ว.</td><td>6 รายการ</td><td>฿89,400</td><td>23 ก.พ. 69</td>
+                    <td><span class="status-pill status-delivered">✅ ส่งถึงแล้ว</span></td>
+                    <td><button class="btn btn-secondary btn-sm">ดูรายละเอียด</button></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--gray-500);">
+              <span>แสดง 1-5 จาก 45 รายการ</span>
+              <div style="display:flex; gap:4px;">
+                <button class="btn btn-secondary btn-sm">‹</button>
+                <button class="btn btn-primary btn-sm">1</button>
+                <button class="btn btn-secondary btn-sm">2</button>
+                <button class="btn btn-secondary btn-sm">3</button>
+                <button class="btn btn-secondary btn-sm">›</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- JV Recommend -->
+          <div id="jv-recommend" class="hidden animate-in">
+            <div class="page-title">🤖 AI Recommended Orders</div>
+            <div class="page-subtitle">วิเคราะห์จากข้อมูลการซื้อในอดีตของแต่ละโรงพยาบาล</div>
+
+            <div class="recommend-banner" style="margin-top:12px;">
+              <div class="rec-icon">📊</div>
+              <div class="rec-text" style="flex:1">
+                <h4>วิเคราะห์จาก Purchase History 24 เดือนย้อนหลัง</h4>
+                <p>ระบบพบ 5 โรงพยาบาลที่มีแนวโน้มต้องสั่งซื้อเพิ่มภายใน 7 วัน ตามรอบการใช้ยาปกติ</p>
+              </div>
+            </div>
+
+            <div class="card" style="margin-top:16px;">
+              <div class="card-header"><h3>โรงพยาบาลที่แนะนำให้เตรียม Stock</h3></div>
+              <div class="card-body" style="padding:0">
+                <table>
+                  <tr><th></th><th>โรงพยาบาล</th><th>คาดการณ์สั่งซื้อ</th><th>มูลค่าประมาณ</th><th>ความมั่นใจ</th><th>รอบสั่งซื้อปกติ</th><th>Action</th></tr>
+                  <tr class="rec-row">
+                    <td><span class="rec-icon-sm">1</span></td>
+                    <td style="font-weight:600">ร.พ. ศิริราช</td><td>ภายใน 2 วัน</td><td>฿850,000</td>
+                    <td><div style="background:#DCFCE7; border-radius:20px; padding:2px 10px; font-size:11px; color:#166534; font-weight:600; display:inline-block;">95%</div></td>
+                    <td>ทุก 30 วัน</td>
+                    <td><button class="btn btn-primary btn-sm">ดู & เตรียม Stock</button></td>
+                  </tr>
+                  <tr class="rec-row">
+                    <td><span class="rec-icon-sm">2</span></td>
+                    <td style="font-weight:600">ร.พ. จุฬาลงกรณ์</td><td>ภายใน 3 วัน</td><td>฿620,000</td>
+                    <td><div style="background:#DCFCE7; border-radius:20px; padding:2px 10px; font-size:11px; color:#166534; font-weight:600; display:inline-block;">90%</div></td>
+                    <td>ทุก 14 วัน</td>
+                    <td><button class="btn btn-primary btn-sm">ดู & เตรียม Stock</button></td>
+                  </tr>
+                  <tr class="rec-row">
+                    <td><span class="rec-icon-sm">3</span></td>
+                    <td style="font-weight:600">ร.พ. รามาธิบดี</td><td>ภายใน 5 วัน</td><td>฿430,000</td>
+                    <td><div style="background:#FEF3C7; border-radius:20px; padding:2px 10px; font-size:11px; color:#92400E; font-weight:600; display:inline-block;">78%</div></td>
+                    <td>ทุก 21 วัน</td>
+                    <td><button class="btn btn-secondary btn-sm">ดูรายละเอียด</button></td>
+                  </tr>
+                  <tr class="rec-row">
+                    <td><span class="rec-icon-sm">4</span></td>
+                    <td style="font-weight:600">ร.พ. ราชวิถี</td><td>ภายใน 7 วัน</td><td>฿310,000</td>
+                    <td><div style="background:#FEF3C7; border-radius:20px; padding:2px 10px; font-size:11px; color:#92400E; font-weight:600; display:inline-block;">72%</div></td>
+                    <td>ทุก 30 วัน</td>
+                    <td><button class="btn btn-secondary btn-sm">ดูรายละเอียด</button></td>
+                  </tr>
+                  <tr class="rec-row">
+                    <td><span class="rec-icon-sm">5</span></td>
+                    <td style="font-weight:600">ร.พ. พระมงกุฎ</td><td>ภายใน 7 วัน</td><td>฿180,000</td>
+                    <td><div style="background:#FEE2E2; border-radius:20px; padding:2px 10px; font-size:11px; color:#991B1B; font-weight:600; display:inline-block;">62%</div></td>
+                    <td>ไม่แน่นอน</td>
+                    <td><button class="btn btn-secondary btn-sm">ดูรายละเอียด</button></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h3>📦 รายการสินค้าที่แนะนำเตรียม Stock — ร.พ. ศิริราช</h3></div>
+              <div class="card-body" style="padding:0; overflow-x:auto;">
+                <table style="min-width:1100px;">
+                  <tr><th>GPU ID</th><th>TPU ID</th><th>Internal ID</th><th>Trade Name</th><th>Generic Name</th><th>Form</th><th>Strength</th><th>Pkg</th><th>UoM</th><th>ซื้อก่อน</th><th>แนะนำ</th><th>Stock</th><th>เตรียมเพิ่ม</th></tr>
+                  <tr>
+                    <td style="font-size:11px">23231234</td><td style="font-size:11px">123123123</td><td style="font-size:11px">110100350112</td>
+                    <td><strong>Zyloprim</strong></td><td>ALLOPURINOL</td><td>TAB</td><td>100mg</td><td>50×10's</td><td>BOX</td>
+                    <td>200</td><td style="font-weight:700;color:var(--primary)">200</td><td>120</td><td style="color:var(--danger);font-weight:700">+80 BOX</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:11px">23231456</td><td style="font-size:11px">123456789</td><td style="font-size:11px">110200480215</td>
+                    <td><strong>Augmentin</strong></td><td>AMOXICILLIN+CLAVULANATE</td><td>TAB</td><td>625mg</td><td>14's</td><td>BOX</td>
+                    <td>150</td><td style="font-weight:700;color:var(--primary)">160</td><td>350</td><td style="color:var(--primary)">เพียงพอ ✓</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:11px">23231789</td><td style="font-size:11px">987654321</td><td style="font-size:11px">150100100050</td>
+                    <td><strong>NSS 0.9%</strong></td><td>SODIUM CHLORIDE</td><td>INJ</td><td>0.9% 1000ml</td><td>1's</td><td>BAG</td>
+                    <td>500</td><td style="font-weight:700;color:var(--primary)">500</td><td>480</td><td style="color:var(--danger);font-weight:700">+20 BAG</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:11px">23232345</td><td style="font-size:11px">111222333</td><td style="font-size:11px">110300220118</td>
+                    <td><strong>Losec</strong></td><td>OMEPRAZOLE</td><td>CAP</td><td>20mg</td><td>7×10's</td><td>BOX</td>
+                    <td>80</td><td style="font-weight:700;color:var(--primary)">85</td><td>200</td><td style="color:var(--primary)">เพียงพอ ✓</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- JV Delivery Tracking -->
+          <div id="jv-delivery" class="hidden animate-in">
+            <div class="page-title">🚚 การจัดส่ง & Tracking</div>
+            <div class="page-subtitle">ติดตามสถานะการจัดส่งสินค้าทั้งหมด</div>
+
+            <div class="stats-row" style="margin-top:16px;">
+              <div class="stat-card"><div class="stat-label">รอจัดเตรียม</div><div class="stat-value" style="color:var(--accent)">4</div></div>
+              <div class="stat-card"><div class="stat-label">กำลังจัดส่ง</div><div class="stat-value" style="color:var(--info)">8</div></div>
+              <div class="stat-card"><div class="stat-label">ส่งถึงวันนี้</div><div class="stat-value" style="color:var(--primary)">3</div></div>
+              <div class="stat-card"><div class="stat-label">ปัญหา/ล่าช้า</div><div class="stat-value" style="color:var(--danger)">1</div></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h3>รายการจัดส่ง</h3></div>
+              <div class="card-body" style="padding:0">
+                <table>
+                  <tr><th>Shipment #</th><th>PO #</th><th>โรงพยาบาล</th><th>สถานะ</th><th>ETA</th><th>Action</th></tr>
+                  <tr>
+                    <td>SHP-0891</td><td>PO-0231</td><td>ร.พ. รามาธิบดี</td>
+                    <td><span class="status-pill status-shipping">🚚 กำลังจัดส่ง</span></td>
+                    <td>วันนี้ 14:00</td>
+                    <td><button class="btn btn-primary btn-sm" onclick="showDeliveryDetail()">ติดตาม</button></td>
+                  </tr>
+                  <tr>
+                    <td>SHP-0890</td><td>PO-0229</td><td>ร.พ. ภูมิพล</td>
+                    <td><span class="status-pill status-delivered">✅ ส่งถึงแล้ว</span></td>
+                    <td>10:30 วันนี้</td>
+                    <td><button class="btn btn-secondary btn-sm">ดูรายละเอียด</button></td>
+                  </tr>
+                  <tr>
+                    <td>SHP-0892</td><td>PO-0232</td><td>ร.พ. จุฬาลงกรณ์</td>
+                    <td><span class="status-pill status-pending">📦 เตรียมสินค้า</span></td>
+                    <td>พรุ่งนี้ 09:00</td>
+                    <td><button class="btn btn-secondary btn-sm">จัดเตรียม</button></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <!-- Delivery Detail (inline) -->
+            <div id="delivery-detail" class="card hidden">
+              <div class="card-header"><h3>📦 SHP-0891 — ร.พ. รามาธิบดี</h3><button class="btn btn-secondary btn-sm" onclick="document.getElementById('delivery-detail').classList.add('hidden')">✕ ปิด</button></div>
+              <div class="card-body">
+                <div class="tracker">
+                  <div class="tracker-step done">
+                    <div class="step-dot">✓</div>
+                    <div class="step-label">สร้าง PO</div>
+                    <div class="step-time">24 ก.พ. 09:00</div>
+                  </div>
+                  <div class="tracker-line done"></div>
+                  <div class="tracker-step done">
+                    <div class="step-dot">✓</div>
+                    <div class="step-label">อนุมัติ PO</div>
+                    <div class="step-time">24 ก.พ. 11:30</div>
+                  </div>
+                  <div class="tracker-line done"></div>
+                  <div class="tracker-step done">
+                    <div class="step-dot">✓</div>
+                    <div class="step-label">จัดเตรียมสินค้า</div>
+                    <div class="step-time">24 ก.พ. 15:00</div>
+                  </div>
+                  <div class="tracker-line active"></div>
+                  <div class="tracker-step active">
+                    <div class="step-dot">4</div>
+                    <div class="step-label">กำลังจัดส่ง</div>
+                    <div class="step-time">25 ก.พ. 08:00</div>
+                  </div>
+                  <div class="tracker-line"></div>
+                  <div class="tracker-step pending">
+                    <div class="step-dot">5</div>
+                    <div class="step-label">ถึงปลายทาง</div>
+                    <div class="step-time">ETA: 14:00</div>
+                  </div>
+                  <div class="tracker-line"></div>
+                  <div class="tracker-step pending">
+                    <div class="step-dot">6</div>
+                    <div class="step-label">รับสินค้าแล้ว</div>
+                    <div class="step-time">—</div>
+                  </div>
+                </div>
+                <div style="background: var(--gray-50); border-radius:8px; padding:12px; font-size:12px; margin-top:8px;">
+                  <strong>อัปเดตล่าสุด:</strong> รถออกจากคลัง GPO เวลา 08:00 น. คาดว่าจะถึง ร.พ. รามาธิบดี ภายในเวลา 14:00 น.
+                  <br><strong>ผู้จัดส่ง:</strong> คุณสมศักดิ์ พ. | โทร. 08X-XXX-XXXX | ทะเบียน กท-1234
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- JV Stock -->
+          <div id="jv-stock" class="hidden animate-in">
+            <div class="page-title">📦 จัดการ Stock สินค้า</div>
+            <div class="page-subtitle">ดูและจัดการ Stock สินค้าทั้งหมด</div>
+            <div class="stats-row" style="margin-top:12px;">
+              <div class="stat-card"><div class="stat-label">รายการสินค้าทั้งหมด</div><div class="stat-value">1,247</div></div>
+              <div class="stat-card"><div class="stat-label">Stock วิกฤต</div><div class="stat-value" style="color:var(--danger)">8</div></div>
+              <div class="stat-card"><div class="stat-label">Stock ใกล้หมด</div><div class="stat-value" style="color:var(--accent)">23</div></div>
+              <div class="stat-card"><div class="stat-label">มูลค่า Stock</div><div class="stat-value">฿18.5M</div></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h3>รายการยา GPO ในคลัง</h3>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input class="form-input" placeholder="ค้นหาจาก ชื่อยา, รหัสต่างๆ..." style="width:280px;font-size:12px;">
+                  <select class="form-input" style="width:auto;font-size:12px;"><option>เรียงตาม Internal ID (ต่ำ → สูง)</option><option>เรียงตาม Trade Name</option><option>เรียงตาม Stock (น้อย → มาก)</option></select>
+                  <button class="btn btn-primary btn-sm">+ เพิ่มสินค้า</button>
+                  <button class="btn btn-secondary btn-sm">📥 อัพโหลดไฟล์</button>
+                </div>
+              </div>
+              <div class="card-body" style="padding:0; overflow-x:auto;">
+                <table style="min-width:1400px; font-size:12px;">
+                  <tr>
+                    <th style="background:#E0F2F1;">GPU ID</th>
+                    <th style="background:#E0F2F1;">TPU ID</th>
+                    <th>Internal ID</th>
+                    <th>Trade Name</th>
+                    <th>Generic Name</th>
+                    <th>Dosage Form</th>
+                    <th>Strength/<br>Dose</th>
+                    <th>Packaging</th>
+                    <th>Based Unit<br>of Measure</th>
+                    <th>Unrestricted<br>Stock</th>
+                    <th>EXP</th>
+                    <th style="background:#E0F2F1;">GPO<br>Avail. Stock</th>
+                    <th>สถานะ</th>
+                  </tr>
+                  <tr>
+                    <td>23231234</td><td>123123123</td><td>110100350112</td>
+                    <td><strong>Zyloprim</strong></td><td>ALLOPURINOL</td><td>TAB</td><td>100mg</td><td>50×10's</td><td>BOX</td>
+                    <td>200<br><span style="font-size:10px;color:var(--gray-400)">ROP: 80</span></td>
+                    <td>เร็วที่สุด<br>30/11/69</td>
+                    <td style="background:#E0F2F1;font-weight:700;color:var(--primary)">200</td>
+                    <td><span class="status-pill status-approved">ปกติ</span></td>
+                  </tr>
+                  <tr>
+                    <td>23231456</td><td>123456789</td><td>110200480215</td>
+                    <td><strong>Augmentin</strong></td><td>AMOXICILLIN+CLAVULANATE</td><td>TAB</td><td>625mg</td><td>14's</td><td>BOX</td>
+                    <td>45<br><span style="font-size:10px;color:var(--gray-400)">ROP: 100</span></td>
+                    <td>เร็วที่สุด<br>15/06/69</td>
+                    <td style="background:#E0F2F1;font-weight:700;color:var(--primary)">500</td>
+                    <td><span class="status-pill status-pending">ใกล้หมด</span></td>
+                  </tr>
+                  <tr>
+                    <td>23231789</td><td>987654321</td><td>150100100050</td>
+                    <td><strong>NSS 0.9%</strong></td><td>SODIUM CHLORIDE</td><td>INJ</td><td>0.9% 1000ml</td><td>1's</td><td>BAG</td>
+                    <td>80<br><span style="font-size:10px;color:var(--gray-400)">ROP: 150</span></td>
+                    <td>เร็วที่สุด<br>30/11/69</td>
+                    <td style="background:#E0F2F1;font-weight:700;color:var(--primary)">1,200</td>
+                    <td><span class="status-pill status-pending">ใกล้หมด</span></td>
+                  </tr>
+                  <tr>
+                    <td>23232345</td><td>111222333</td><td>110300220118</td>
+                    <td><strong>Losec</strong></td><td>OMEPRAZOLE</td><td>CAP</td><td>20mg</td><td>7×10's</td><td>BOX</td>
+                    <td>200<br><span style="font-size:10px;color:var(--gray-400)">ROP: 100</span></td>
+                    <td>เร็วที่สุด<br>28/02/70</td>
+                    <td style="background:#E0F2F1;font-weight:700;color:var(--primary)">350</td>
+                    <td><span class="status-pill status-approved">ปกติ</span></td>
+                  </tr>
+                  <tr style="background:#FEF3C7;">
+                    <td>23233456</td><td>444555666</td><td>110400550320</td>
+                    <td><strong>Glucophage</strong></td><td>METFORMIN HCL</td><td>TAB</td><td>500mg</td><td>10×10's</td><td>BOX</td>
+                    <td style="color:var(--danger);font-weight:700">20 ⬇<br><span style="font-size:10px;color:var(--gray-400)">ROP: 80</span></td>
+                    <td>เร็วที่สุด<br>30/11/69</td>
+                    <td style="background:#FEF3C7;font-weight:700;color:var(--primary)">800</td>
+                    <td><span class="status-pill status-rejected">⚠ วิกฤต</span></td>
+                  </tr>
+                  <tr style="background:#FEF9C3;">
+                    <td>23234567</td><td>777888999</td><td>120100330225</td>
+                    <td><strong>Ventolin</strong></td><td>SALBUTAMOL SULFATE</td><td>INH</td><td>100mcg/dose</td><td>200 doses</td><td>CAN</td>
+                    <td>20<br><span style="font-size:10px;color:var(--gray-400)">ROP: 80</span></td>
+                    <td style="background:#FEF3C7">เร็วที่สุด<br><strong style="color:var(--danger)">30/11/68 ⚠</strong></td>
+                    <td style="background:#E0F2F1;font-weight:700;color:var(--primary)">150</td>
+                    <td><span class="status-pill status-rejected">⚠ ใกล้หมดอายุ</span></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- JV Hospitals -->
+          <div id="jv-hospitals" class="hidden animate-in">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <div><div class="page-title">🏥 จัดการโรงพยาบาล</div><div class="page-subtitle">โรงพยาบาลในระบบทั้งหมด 47 แห่ง</div></div>
+              <button class="btn btn-primary">+ เพิ่มโรงพยาบาล</button>
+            </div>
+            <div class="card">
+              <div class="card-body" style="padding:0">
+                <table>
+                  <tr><th>โรงพยาบาล</th><th>ที่อยู่</th><th>ผู้ใช้งาน</th><th>PO เดือนนี้</th><th>ยอดซื้อสะสม</th><th>สถานะ</th></tr>
+                  <tr><td style="font-weight:600">ร.พ. ศิริราช</td><td>กรุงเทพฯ</td><td>5 คน</td><td>3 PO</td><td>฿12.5M</td><td><span class="status-pill status-approved">Active</span></td></tr>
+                  <tr><td style="font-weight:600">ร.พ. จุฬาลงกรณ์</td><td>กรุงเทพฯ</td><td>4 คน</td><td>2 PO</td><td>฿8.3M</td><td><span class="status-pill status-approved">Active</span></td></tr>
+                  <tr><td style="font-weight:600">ร.พ. รามาธิบดี</td><td>กรุงเทพฯ</td><td>3 คน</td><td>2 PO</td><td>฿9.1M</td><td><span class="status-pill status-approved">Active</span></td></tr>
+                  <tr><td style="font-weight:600">ร.พ. ราชวิถี</td><td>กรุงเทพฯ</td><td>3 คน</td><td>1 PO</td><td>฿5.7M</td><td><span class="status-pill status-approved">Active</span></td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- JV Users -->
+          <div id="jv-users" class="hidden animate-in">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <div><div class="page-title">👥 จัดการ User & Role</div><div class="page-subtitle">จัดการผู้ใช้งานในระบบทั้งหมด</div></div>
+              <button class="btn btn-primary">+ เพิ่ม User ใหม่</button>
+            </div>
+            <div class="tabs">
+              <div class="tab active">ทั้งหมด (28)</div>
+              <div class="tab">JV Staff (6)</div>
+              <div class="tab">Hospital Requester (12)</div>
+              <div class="tab">Hospital Approver (10)</div>
+            </div>
+            <div class="card">
+              <div class="card-body" style="padding:0">
+                <table>
+                  <tr><th>ชื่อ</th><th>Email</th><th>Role</th><th>โรงพยาบาล</th><th>สถานะ</th><th>Action</th></tr>
+                  <tr><td>คุณสมชาย กล้าหาญ</td><td>somchai@rjvt.go.th</td><td><span class="status-pill" style="background:#F3E8FF; color:#6B21A8">Requester</span></td><td>ร.พ. ราชวิถี</td><td><span class="status-pill status-approved">Active</span></td><td><button class="btn btn-secondary btn-sm">แก้ไข</button></td></tr>
+                  <tr><td>คุณวิภา นาวิน</td><td>wipa@siriraj.go.th</td><td><span class="status-pill" style="background:#F3E8FF; color:#6B21A8">Requester</span></td><td>ร.พ. ศิริราช</td><td><span class="status-pill status-approved">Active</span></td><td><button class="btn btn-secondary btn-sm">แก้ไข</button></td></tr>
+                  <tr><td>คุณดร.ประวิทย์ จ.</td><td>prawit@siriraj.go.th</td><td><span class="status-pill" style="background:#DBEAFE; color:#1E40AF">Approver</span></td><td>ร.พ. ศิริราช</td><td><span class="status-pill status-approved">Active</span></td><td><button class="btn btn-secondary btn-sm">แก้ไข</button></td></tr>
+                  <tr><td>คุณอรพิน ล.</td><td>orapin@gpo-jv.co.th</td><td><span class="status-pill" style="background:#FEF3C7; color:#92400E">JV Admin</span></td><td>— (JV)</td><td><span class="status-pill status-approved">Active</span></td><td><button class="btn btn-secondary btn-sm">แก้ไข</button></td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HOSPITAL PROTOTYPE ==================== -->
+  <div id="hospitalMode" class="hidden">
+    <div class="proto-container">
+      <div class="sidebar" style="background: #1E3A5F;">
+        <div class="sidebar-logo"><div class="logo-icon" style="color:#1E3A5F;">🏥</div><span>GPO Order</span></div>
+        <div class="sidebar-role"><div class="role-name" style="color:#93C5FD;">Hospital Requester</div>ร.พ. ศิริราช</div>
+        <nav class="sidebar-nav">
+          <div class="nav-group">
+            <div class="nav-group-label">หลัก</div>
+            <div class="nav-item active" onclick="showHospPage('hdashboard')"><span class="nav-icon">📊</span><span>Dashboard</span></div>
+            <div class="nav-item" onclick="showHospPage('hcreate')"><span class="nav-icon">➕</span><span>สร้าง PO ใหม่</span></div>
+            <div class="nav-item" onclick="showHospPage('horders')"><span class="nav-icon">📋</span><span>รายการ PO</span><span class="nav-badge">3</span></div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-label">ติดตาม</div>
+            <div class="nav-item" onclick="showHospPage('htracking')"><span class="nav-icon">🚚</span><span>ติดตามการจัดส่ง</span></div>
+            <div class="nav-item"><span class="nav-icon">📦</span><span>ประวัติรับสินค้า</span></div>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-label">อื่นๆ</div>
+            <div class="nav-item"><span class="nav-icon">📈</span><span>สรุปรายงาน</span></div>
+            <div class="nav-item"><span class="nav-icon">⚙️</span><span>ตั้งค่า</span></div>
+          </div>
+        </nav>
+      </div>
+      <div class="main-area">
+        <div class="topbar">
+          <button class="btn btn-secondary btn-sm" onclick="showMode('review')" style="font-size:11px;">← กลับ Review</button>
+          <div class="topbar-search"><input placeholder="ค้นหายา, PO, สถานะ..."></div>
+          <div class="topbar-actions">
+            <button class="topbar-btn">🔔<span class="dot"></span></button>
+            <div class="topbar-user"><div class="avatar" style="background:#1E3A5F;">วภ</div><span>คุณวิภา น.</span></div>
+          </div>
+        </div>
+        <div class="content" id="hosp-content">
+
+          <!-- Hospital Dashboard -->
+          <div id="hosp-hdashboard" class="animate-in">
+            <div class="page-title">Dashboard — ร.พ. ศิริราช</div>
+            <div class="page-subtitle">สรุปภาพรวมการสั่งซื้อยา</div>
+
+            <div class="stats-row">
+              <div class="stat-card"><div class="stat-label">PO รออนุมัติ (ร.พ.)</div><div class="stat-value" style="color:var(--accent)">3</div></div>
+              <div class="stat-card"><div class="stat-label">กำลังจัดส่ง</div><div class="stat-value" style="color:var(--info)">2</div></div>
+              <div class="stat-card"><div class="stat-label">ยอดสั่งเดือนนี้</div><div class="stat-value">฿1.8M</div></div>
+              <div class="stat-card"><div class="stat-label">จำนวน PO เดือนนี้</div><div class="stat-value">5</div></div>
+            </div>
+
+            <div class="recommend-banner" style="background: linear-gradient(135deg, #EFF6FF, #DBEAFE); border-color: #93C5FD;">
+              <div class="rec-icon">💡</div>
+              <div class="rec-text" style="flex:1">
+                <h4 style="color:#1E40AF;">แนะนำ: ถึงเวลาสั่งซื้อยารอบถัดไป</h4>
+                <p style="color:#2563EB;">จากรอบการใช้ยาปกติ มี 8 รายการที่ควรสั่งเพิ่มภายในสัปดาห์นี้</p>
+              </div>
+              <button class="btn btn-sm" style="background:#2563EB; color:white;" onclick="showHospPage('hcreate')">สร้าง PO จากคำแนะนำ</button>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h3>🚚 สถานะการจัดส่งล่าสุด</h3></div>
+              <div class="card-body">
+                <div style="margin-bottom:16px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <strong style="font-size:13px;">PO-2569-0220 — 12 รายการ</strong>
+                    <span class="status-pill status-shipping">🚚 กำลังจัดส่ง</span>
+                  </div>
+                  <div class="tracker">
+                    <div class="tracker-step done"><div class="step-dot">✓</div><div class="step-label">สั่งซื้อ</div></div>
+                    <div class="tracker-line done"></div>
+                    <div class="tracker-step done"><div class="step-dot">✓</div><div class="step-label">อนุมัติ</div></div>
+                    <div class="tracker-line done"></div>
+                    <div class="tracker-step done"><div class="step-dot">✓</div><div class="step-label">เตรียมของ</div></div>
+                    <div class="tracker-line active"></div>
+                    <div class="tracker-step active"><div class="step-dot">🚚</div><div class="step-label">จัดส่ง</div></div>
+                    <div class="tracker-line"></div>
+                    <div class="tracker-step pending"><div class="step-dot">5</div><div class="step-label">รับสินค้า</div></div>
+                  </div>
+                  <div style="font-size:11px; color:var(--gray-500);">คาดว่าจะถึงวันนี้ 14:00 น. | ผู้จัดส่ง: คุณสมศักดิ์</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h3>📋 PO ล่าสุดของฉัน</h3><button class="btn btn-secondary btn-sm" onclick="showHospPage('horders')">ดูทั้งหมด</button></div>
+              <div class="card-body" style="padding:0">
+                <table>
+                  <tr><th>PO #</th><th>รายการ</th><th>มูลค่า</th><th>สถานะ</th><th>วันที่</th></tr>
+                  <tr><td>PO-2569-0233</td><td>23 รายการ</td><td>฿891,200</td><td><span class="status-pill status-pending">⏳ รอ ร.พ. อนุมัติ</span></td><td>25 ก.พ.</td></tr>
+                  <tr><td>PO-2569-0225</td><td>18 รายการ</td><td>฿562,000</td><td><span class="status-pill status-approved">✓ JV อนุมัติแล้ว</span></td><td>20 ก.พ.</td></tr>
+                  <tr><td>PO-2569-0220</td><td>12 รายการ</td><td>฿324,500</td><td><span class="status-pill status-shipping">🚚 กำลังจัดส่ง</span></td><td>18 ก.พ.</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hospital Create PO -->
+          <div id="hosp-hcreate" class="hidden animate-in">
+            <div class="page-title">➕ สร้างใบสั่งซื้อใหม่ (PO)</div>
+            <div class="page-subtitle">เลือกสินค้าจากแคตตาล็อก หรือใช้คำแนะนำจากระบบ</div>
+
+            <div class="recommend-banner" style="margin-top:12px;">
+              <div class="rec-icon">🤖</div>
+              <div class="rec-text" style="flex:1">
+                <h4>สั่งซื้อตามคำแนะนำ (Quick Order)</h4>
+                <p>ระบบเตรียมรายการจากข้อมูลการสั่งซื้อครั้งก่อน — แก้ไข Qty ได้ก่อนยืนยัน</p>
+              </div>
+              <button class="btn btn-accent btn-sm" onclick="fillRecommended()">ใช้คำแนะนำ</button>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3>📝 รายการสินค้า</h3>
+                <div style="display:flex; gap:8px;">
+                  <input class="form-input" placeholder="🔍 ค้นหาจาก ชื่อยา, GPU ID, TPU ID, Internal ID..." style="width:350px; font-size:12px;" id="drug-search">
+                  <button class="btn btn-primary btn-sm">+ เพิ่มรายการ</button>
+                </div>
+              </div>
+              <div class="card-body" style="padding:0; overflow-x:auto;">
+                <table id="po-table" style="min-width:1200px; font-size:12px;">
+                  <tr>
+                    <th style="width:30px">#</th>
+                    <th>GPU ID</th>
+                    <th>TPU ID</th>
+                    <th>Internal ID</th>
+                    <th>Trade Name</th>
+                    <th>Generic Name</th>
+                    <th>Form</th>
+                    <th>Strength</th>
+                    <th>Pkg</th>
+                    <th>UoM</th>
+                    <th>ราคา/หน่วย</th>
+                    <th style="background:#E0F2F1">GPO Stock</th>
+                    <th style="width:80px">จำนวน</th>
+                    <th>รวม</th>
+                    <th style="width:40px"></th>
+                  </tr>
+                  <tr>
+                    <td>1</td>
+                    <td style="font-size:11px">23231234</td><td style="font-size:11px">123123123</td><td style="font-size:11px">110100350112</td>
+                    <td><strong>Zyloprim</strong></td><td>ALLOPURINOL</td><td>TAB</td><td>100mg</td><td>50×10's</td><td>BOX</td>
+                    <td>฿450</td>
+                    <td style="background:#E0F2F1;color:var(--primary);font-weight:600">200</td>
+                    <td><input type="number" class="form-input" value="200" style="width:70px; font-size:12px;"></td>
+                    <td style="font-weight:700;">฿90,000</td>
+                    <td><button class="btn btn-danger btn-sm">🗑</button></td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td style="font-size:11px">23231456</td><td style="font-size:11px">123456789</td><td style="font-size:11px">110200480215</td>
+                    <td><strong>Augmentin</strong></td><td>AMOXICILLIN+CLAVULANATE</td><td>TAB</td><td>625mg</td><td>14's</td><td>BOX</td>
+                    <td>฿380</td>
+                    <td style="background:#E0F2F1;color:var(--primary);font-weight:600">500</td>
+                    <td><input type="number" class="form-input" value="150" style="width:70px; font-size:12px;"></td>
+                    <td style="font-weight:700;">฿57,000</td>
+                    <td><button class="btn btn-danger btn-sm">🗑</button></td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td style="font-size:11px">23231789</td><td style="font-size:11px">987654321</td><td style="font-size:11px">150100100050</td>
+                    <td><strong>NSS 0.9%</strong></td><td>SODIUM CHLORIDE</td><td>INJ</td><td>0.9% 1000ml</td><td>1's</td><td>BAG</td>
+                    <td>฿35</td>
+                    <td style="background:#E0F2F1;color:var(--primary);font-weight:600">1,200</td>
+                    <td><input type="number" class="form-input" value="500" style="width:70px; font-size:12px;"></td>
+                    <td style="font-weight:700;">฿17,500</td>
+                    <td><button class="btn btn-danger btn-sm">🗑</button></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:16px 20px; border-radius:var(--radius); box-shadow:var(--shadow);">
+              <div>
+                <span style="font-size:13px; color:var(--gray-500);">รวม 3 รายการ</span>
+                <span style="font-size:20px; font-weight:800; margin-left:12px;">฿164,500</span>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-secondary">💾 บันทึกแบบร่าง</button>
+                <button class="btn btn-primary">📤 ส่งให้ Approver อนุมัติ</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hospital Orders List -->
+          <div id="hosp-horders" class="hidden animate-in">
+            <div class="page-title">📋 รายการ PO ทั้งหมด</div>
+            <div class="page-subtitle">ประวัติการสั่งซื้อของ ร.พ. ศิริราช</div>
+            <div class="tabs" style="margin-top:12px;">
+              <div class="tab active">ทั้งหมด</div>
+              <div class="tab">แบบร่าง</div>
+              <div class="tab">รออนุมัติ (ร.พ.)</div>
+              <div class="tab">รออนุมัติ (JV)</div>
+              <div class="tab">กำลังจัดส่ง</div>
+              <div class="tab">เสร็จสิ้น</div>
+            </div>
+            <div class="card">
+              <div class="card-body" style="padding:0">
+                <table>
+                  <tr><th>PO #</th><th>สร้างโดย</th><th>รายการ</th><th>มูลค่า</th><th>สถานะ</th><th>วันที่</th><th>Action</th></tr>
+                  <tr>
+                    <td style="font-weight:600">PO-2569-0233</td><td>คุณวิภา น.</td><td>23 รายการ</td><td>฿891,200</td>
+                    <td><span class="status-pill status-pending">⏳ รอ ร.พ. อนุมัติ</span></td><td>25 ก.พ.</td>
+                    <td><button class="btn btn-secondary btn-sm">ดู</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600">PO-2569-0225</td><td>คุณวิภา น.</td><td>18 รายการ</td><td>฿562,000</td>
+                    <td><span class="status-pill status-approved">✓ JV อนุมัติแล้ว</span></td><td>20 ก.พ.</td>
+                    <td><button class="btn btn-secondary btn-sm">ดู</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600">PO-2569-0220</td><td>คุณวิภา น.</td><td>12 รายการ</td><td>฿324,500</td>
+                    <td><span class="status-pill status-shipping">🚚 กำลังจัดส่ง</span></td><td>18 ก.พ.</td>
+                    <td><button class="btn btn-primary btn-sm" onclick="showHospPage('htracking')">ติดตาม</button></td>
+                  </tr>
+                  <tr>
+                    <td>PO-2569-0210</td><td>คุณวิภา น.</td><td>15 รายการ</td><td>฿445,800</td>
+                    <td><span class="status-pill status-delivered">✅ ส่งถึงแล้ว</span></td><td>10 ก.พ.</td>
+                    <td><button class="btn btn-secondary btn-sm">ดู</button></td>
+                  </tr>
+                  <tr>
+                    <td style="color:var(--gray-400)">DRAFT-001</td><td>คุณวิภา น.</td><td>5 รายการ</td><td>฿—</td>
+                    <td><span class="status-pill status-draft">📝 แบบร่าง</span></td><td>25 ก.พ.</td>
+                    <td><button class="btn btn-primary btn-sm">แก้ไข</button></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hospital Tracking -->
+          <div id="hosp-htracking" class="hidden animate-in">
+            <div class="page-title">🚚 ติดตามการจัดส่ง</div>
+            <div class="page-subtitle">ดูสถานะการจัดส่งแบบ realtime</div>
+
+            <div class="card" style="margin-top:16px;">
+              <div class="card-header"><h3>📦 PO-2569-0220 — 12 รายการ (฿324,500)</h3><span class="status-pill status-shipping">🚚 กำลังจัดส่ง</span></div>
+              <div class="card-body">
+                <div class="tracker">
+                  <div class="tracker-step done"><div class="step-dot">✓</div><div class="step-label">สร้าง PO</div><div class="step-time">18 ก.พ. 10:00</div></div>
+                  <div class="tracker-line done"></div>
+                  <div class="tracker-step done"><div class="step-dot">✓</div><div class="step-label">ร.พ. อนุมัติ</div><div class="step-time">18 ก.พ. 14:00</div></div>
+                  <div class="tracker-line done"></div>
+                  <div class="tracker-step done"><div class="step-dot">✓</div><div class="step-label">JV อนุมัติ</div><div class="step-time">19 ก.พ. 09:00</div></div>
+                  <div class="tracker-line done"></div>
+                  <div class="tracker-step done"><div class="step-dot">✓</div><div class="step-label">จัดเตรียม</div><div class="step-time">24 ก.พ. 15:00</div></div>
+                  <div class="tracker-line active"></div>
+                  <div class="tracker-step active"><div class="step-dot">🚚</div><div class="step-label">กำลังจัดส่ง</div><div class="step-time">25 ก.พ. 08:00</div></div>
+                  <div class="tracker-line"></div>
+                  <div class="tracker-step pending"><div class="step-dot">6</div><div class="step-label">รับสินค้า</div><div class="step-time">ETA: 14:00</div></div>
+                </div>
+
+                <div style="background:var(--info-light); border-radius:8px; padding:12px; font-size:12px; margin-top:12px;">
+                  <strong>🚚 อัปเดตล่าสุด (10:30 น.):</strong> รถออกจากคลัง GPO แล้ว กำลังเดินทางมาที่ ร.พ. ศิริราช<br>
+                  <strong>ผู้จัดส่ง:</strong> คุณสมศักดิ์ พ. | <strong>โทร:</strong> 08X-XXX-XXXX<br>
+                  <strong>คาดว่าถึง:</strong> 14:00 น. วันนี้
+                </div>
+
+                <div style="margin-top:16px; display:flex; gap:8px;">
+                  <button class="btn btn-primary">✅ ยืนยันรับสินค้า</button>
+                  <button class="btn btn-secondary">📞 โทรหาผู้จัดส่ง</button>
+                  <button class="btn btn-danger">⚠️ แจ้งปัญหา</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h3>📋 รายการสินค้าใน Shipment</h3></div>
+              <div class="card-body" style="padding:0; overflow-x:auto;">
+                <table style="min-width:900px; font-size:12px;">
+                  <tr><th>#</th><th>GPU ID</th><th>Internal ID</th><th>Trade Name</th><th>Generic Name</th><th>Form</th><th>Strength</th><th>Pkg</th><th>UoM</th><th>สั่ง</th><th>ส่ง</th><th>สถานะ</th></tr>
+                  <tr><td>1</td><td style="font-size:11px">23231234</td><td style="font-size:11px">110100350112</td><td><strong>Zyloprim</strong></td><td>ALLOPURINOL</td><td>TAB</td><td>100mg</td><td>50×10's</td><td>BOX</td><td>200</td><td>200</td><td style="color:var(--primary);font-weight:600">✓ ครบ</td></tr>
+                  <tr><td>2</td><td style="font-size:11px">23231456</td><td style="font-size:11px">110200480215</td><td><strong>Augmentin</strong></td><td>AMOXICILLIN+CLAVULANATE</td><td>TAB</td><td>625mg</td><td>14's</td><td>BOX</td><td>150</td><td>150</td><td style="color:var(--primary);font-weight:600">✓ ครบ</td></tr>
+                  <tr><td>3</td><td style="font-size:11px">23231789</td><td style="font-size:11px">150100100050</td><td><strong>NSS 0.9%</strong></td><td>SODIUM CHLORIDE</td><td>INJ</td><td>0.9% 1000ml</td><td>1's</td><td>BAG</td><td>500</td><td>500</td><td style="color:var(--primary);font-weight:600">✓ ครบ</td></tr>
+                  <tr><td>4</td><td style="font-size:11px">23232345</td><td style="font-size:11px">110300220118</td><td><strong>Losec</strong></td><td>OMEPRAZOLE</td><td>CAP</td><td>20mg</td><td>7×10's</td><td>BOX</td><td>80</td><td>80</td><td style="color:var(--primary);font-weight:600">✓ ครบ</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showMode(mode) {
+    document.getElementById('reviewMode').classList.add('hidden');
+    document.getElementById('jvMode').classList.add('hidden');
+    document.getElementById('hospitalMode').classList.add('hidden');
+
+    // Update mode buttons
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+
+    if (mode === 'review') {
+      document.getElementById('reviewMode').classList.remove('hidden');
+      document.querySelectorAll('.mode-btn')[0].classList.add('active');
+    } else if (mode === 'jv') {
+      document.getElementById('jvMode').classList.remove('hidden');
+    } else if (mode === 'hospital') {
+      document.getElementById('hospitalMode').classList.remove('hidden');
+    }
+  }
+
+  function showJVPage(page) {
+    // Hide all JV pages
+    document.querySelectorAll('[id^="jv-"]').forEach(el => {
+      if (el.id !== 'jv-content') el.classList.add('hidden');
+    });
+    document.getElementById('jv-' + page).classList.remove('hidden');
+
+    // Update nav active state
+    const sidebar = document.querySelector('#jvMode .sidebar-nav');
+    sidebar.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+
+  function showHospPage(page) {
+    document.querySelectorAll('[id^="hosp-"]').forEach(el => {
+      if (el.id !== 'hosp-content') el.classList.add('hidden');
+    });
+    document.getElementById('hosp-' + page).classList.remove('hidden');
+
+    const sidebar = document.querySelector('#hospitalMode .sidebar-nav');
+    sidebar.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+
+  function showDeliveryDetail() {
+    document.getElementById('delivery-detail').classList.remove('hidden');
+    document.getElementById('delivery-detail').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function fillRecommended() {
+    alert('✅ ระบบเติมรายการจากคำแนะนำแล้ว!\n\nรายการถูกเตรียมจากข้อมูลการสั่งซื้อครั้งก่อน\nคุณสามารถแก้ไขจำนวนได้ก่อนส่งให้ Approver อนุมัติ');
+  }
+
+  // ===== DATA MANAGEMENT =====
+  const appData = {
+    hospitals: [
+      { id: 'h1', name: 'ร.พ. ศิริราช (กรุงเทพฯ)', region: 'Bangkok', status: 'active' },
+      { id: 'h2', name: 'ร.พ. จุฬาลงกรณ์ (กรุงเทพฯ)', region: 'Bangkok', status: 'active' },
+      { id: 'h3', name: 'ร.พ. รามาธิบดี (กรุงเทพฯ)', region: 'Bangkok', status: 'active' },
+      { id: 'h4', name: 'ร.พ. ราชวิถี (กรุงเทพฯ)', region: 'Bangkok', status: 'active' },
+      { id: 'h5', name: 'ร.พ. พระมงกุฎเกล้า (กรุงเทพฯ)', region: 'Bangkok', status: 'active' },
+      { id: 'h6', name: 'ร.พ. ภูมิพลอดุลยเดช (กรุงเทพฯ)', region: 'Bangkok', status: 'active' },
+      { id: 'h7', name: 'ร.พ. ธรรมศาสตร์เฉลิมพระเกียรติ (ปทุมธานี)', region: 'Pathum Thani', status: 'active' },
+      { id: 'h8', name: 'ร.พ. มหาราชนครเชียงใหม่ (เชียงใหม่)', region: 'Chiang Mai', status: 'active' }
+    ],
+    products: [
+      { gpuId: '23231234', tpuId: '123123123', internalId: '110100350112', tradeName: 'Zyloprim', genericName: 'ALLOPURINOL', form: 'TAB', strength: '100mg', packaging: "50×10's", uom: 'BOX', unrestricted: 450, rop: 100, exp: '2568-08-15', gpoStock: 1200 },
+      { gpuId: '23231456', tpuId: '123456789', internalId: '110200480215', tradeName: 'Augmentin', genericName: 'AMOXICILLIN+CLAVULANATE', form: 'TAB', strength: '625mg', packaging: "14's", uom: 'BOX', unrestricted: 280, rop: 50, exp: '2568-05-10', gpoStock: 850 },
+      { gpuId: '23231789', tpuId: '789123456', internalId: '150100100050', tradeName: 'NSS 0.9%', genericName: 'SODIUM CHLORIDE', form: 'INJ', strength: '0.9% 1000ml', packaging: "1's", uom: 'BAG', unrestricted: 2100, rop: 500, exp: '2568-12-31', gpoStock: 3500 },
+      { gpuId: '23232345', tpuId: '234567890', internalId: '110300220118', tradeName: 'Losec', genericName: 'OMEPRAZOLE', form: 'CAP', strength: '20mg', packaging: "7×10's", uom: 'BOX', unrestricted: 180, rop: 40, exp: '2568-03-20', gpoStock: 420 },
+      { gpuId: '23232567', tpuId: '567890123', internalId: '110400150200', tradeName: 'Glucophage', genericName: 'METFORMIN HCL', form: 'TAB', strength: '500mg', packaging: "10×10's", uom: 'BOX', unrestricted: 320, rop: 80, exp: '2568-09-05', gpoStock: 950 },
+      { gpuId: '23232890', tpuId: '890123456', internalId: '140200120045', tradeName: 'Ventolin', genericName: 'SALBUTAMOL SULFATE', form: 'INH', strength: '100mcg/dose', packaging: '200 doses', uom: 'CAN', unrestricted: 65, rop: 15, exp: '2567-11-30', gpoStock: 180 },
+      { gpuId: '23233012', tpuId: '012345678', internalId: '110500180160', tradeName: 'Norvasc', genericName: 'AMLODIPINE BESYLATE', form: 'TAB', strength: '5mg', packaging: "3×10's", uom: 'BOX', unrestricted: 150, rop: 30, exp: '2568-07-12', gpoStock: 580 },
+      { gpuId: '23233234', tpuId: '345678901', internalId: '110600200250', tradeName: 'Lipitor', genericName: 'ATORVASTATIN CALCIUM', form: 'TAB', strength: '20mg', packaging: "3×10's", uom: 'BOX', unrestricted: 200, rop: 50, exp: '2568-06-28', gpoStock: 720 },
+      { gpuId: '23233456', tpuId: '456789012', internalId: '110700160140', tradeName: 'Plavix', genericName: 'CLOPIDOGREL', form: 'TAB', strength: '75mg', packaging: "2×14's", uom: 'BOX', unrestricted: 120, rop: 25, exp: '2568-04-10', gpoStock: 380 },
+      { gpuId: '23233678', tpuId: '678901234', internalId: '150200120090', tradeName: 'Ceftriaxone GPO', genericName: 'CEFTRIAXONE SODIUM', form: 'INJ', strength: '1g', packaging: "10's", uom: 'BOX', unrestricted: 800, rop: 200, exp: '2568-10-15', gpoStock: 2400 },
+      { gpuId: '23233890', tpuId: '890123457', internalId: '110800100180', tradeName: 'Paracetamol GPO', genericName: 'PARACETAMOL', form: 'TAB', strength: '500mg', packaging: "10×10's", uom: 'BOX', unrestricted: 950, rop: 200, exp: '2568-11-20', gpoStock: 3100 },
+      { gpuId: '23234012', tpuId: '012345679', internalId: '110900150120', tradeName: 'Amoxi GPO', genericName: 'AMOXICILLIN', form: 'CAP', strength: '500mg', packaging: "50×10's", uom: 'BOX', unrestricted: 520, rop: 100, exp: '2568-08-08', gpoStock: 1650 }
+    ],
+    orders: [],
+    notifications: []
+  };
+
+  // Initialize data from localStorage
+  function initData() {
+    const saved = localStorage.getItem('gpoData');
+    if (saved) {
+      const loaded = JSON.parse(saved);
+      appData.orders = loaded.orders || [];
+      appData.notifications = loaded.notifications || [];
+    }
+  }
+
+  // Save data to localStorage
+  function saveData() {
+    localStorage.setItem('gpoData', JSON.stringify({
+      orders: appData.orders,
+      notifications: appData.notifications
+    }));
+  }
+
+  // Generate PO Number
+  function generatePONumber() {
+    const year = new Date().getFullYear() + 543; // Thai calendar
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const seq = String(appData.orders.length + 1).padStart(4, '0');
+    return `PO-${year}-${month}${seq}`;
+  }
+
+  // Create new order (from Hospital Requester)
+  function createOrder(hospitalId, items) {
+    const order = {
+      id: generatePONumber(),
+      hospitalId: hospitalId,
+      items: items,
+      status: 'draft',
+      createdBy: 'requester',
+      createdAt: new Date().toISOString(),
+      approvedBy: null,
+      approvedAt: null,
+      totalValue: items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
+    };
+    appData.orders.push(order);
+    saveData();
+    addNotification('order_created', order.id);
+    return order;
+  }
+
+  // Submit order for approval
+  function submitOrder(orderId) {
+    const order = appData.orders.find(o => o.id === orderId);
+    if (order) {
+      order.status = 'pending_approval';
+      order.submittedAt = new Date().toISOString();
+      saveData();
+      addNotification('order_submitted', orderId);
+    }
+  }
+
+  // Approve order (from Hospital Approver or JV Admin)
+  function approveOrder(orderId, approverRole) {
+    const order = appData.orders.find(o => o.id === orderId);
+    if (order) {
+      if (approverRole === 'hospital_approver' && order.status === 'pending_approval') {
+        order.status = 'hospital_approved';
+      } else if (approverRole === 'jv_admin' && order.status === 'hospital_approved') {
+        order.status = 'approved';
+      }
+      order.approvedAt = new Date().toISOString();
+      order.approvedBy = approverRole;
+      saveData();
+      addNotification('order_approved', orderId);
+    }
+  }
+
+  // Reject order
+  function rejectOrder(orderId, reason) {
+    const order = appData.orders.find(o => o.id === orderId);
+    if (order) {
+      order.status = 'rejected';
+      order.rejectionReason = reason;
+      saveData();
+      addNotification('order_rejected', orderId);
+    }
+  }
+
+  // Update order status (simulation)
+  function updateOrderStatus(orderId, newStatus) {
+    const order = appData.orders.find(o => o.id === orderId);
+    if (order) {
+      order.status = newStatus;
+      if (newStatus === 'shipping') {
+        order.shippingDate = new Date().toISOString();
+      } else if (newStatus === 'delivered') {
+        order.deliveredDate = new Date().toISOString();
+      }
+      saveData();
+      addNotification('order_status_changed', orderId);
+    }
+  }
+
+  // Add notification
+  function addNotification(type, relatedId) {
+    const notification = {
+      id: Date.now(),
+      type: type,
+      relatedId: relatedId,
+      read: false,
+      timestamp: new Date().toISOString()
+    };
+    appData.notifications.push(notification);
+    saveData();
+  }
+
+  // Get unread notification count
+  function getUnreadCount() {
+    return appData.notifications.filter(n => !n.read).length;
+  }
+
+  // Mark notification as read
+  function markNotificationRead(notifId) {
+    const notif = appData.notifications.find(n => n.id === notifId);
+    if (notif) {
+      notif.read = true;
+      saveData();
+    }
+  }
+
+  // Search products by GPU ID, TPU ID, Internal ID, or Trade Name
+  function searchProducts(query) {
+    if (!query) return appData.products;
+    const q = query.toLowerCase();
+    return appData.products.filter(p =>
+      p.gpuId.includes(q) ||
+      p.tpuId.includes(q) ||
+      p.internalId.includes(q) ||
+      p.tradeName.toLowerCase().includes(q) ||
+      p.genericName.toLowerCase().includes(q)
+    );
+  }
+
+  // Get hospital name by ID
+  function getHospitalName(id) {
+    const h = appData.hospitals.find(h => h.id === id);
+    return h ? h.name : 'Unknown';
+  }
+
+  // Get product by GPU ID
+  function getProductByGpuId(gpuId) {
+    return appData.products.find(p => p.gpuId === gpuId);
+  }
+
+  // Get orders for hospital
+  function getHospitalOrders(hospitalId, status = null) {
+    let orders = appData.orders.filter(o => o.hospitalId === hospitalId);
+    if (status) {
+      orders = orders.filter(o => o.status === status);
+    }
+    return orders;
+  }
+
+  // Get all pending orders for approval
+  function getPendingOrders() {
+    return appData.orders.filter(o => o.status === 'pending_approval' || o.status === 'hospital_approved');
+  }
+
+  // Initialize on load
+  initData();
+
+  // Event listeners for button interactions
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add to cart functionality
+    const addToCartBtns = document.querySelectorAll('[data-action="add-to-cart"]');
+    addToCartBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const gpuId = this.getAttribute('data-gpu-id');
+        const product = getProductByGpuId(gpuId);
+        if (product) {
+          alert(`✅ เพิ่ม ${product.tradeName} (${product.genericName}) ลงในตะกร้าแล้ว!`);
+        }
+      });
+    });
+
+    // Approve/Reject buttons
+    const approveBtns = document.querySelectorAll('[data-action="approve"]');
+    approveBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const orderId = this.getAttribute('data-order-id');
+        approveOrder(orderId, 'jv_admin');
+        alert(`✅ อนุมัติ PO ${orderId} สำเร็จ!`);
+      });
+    });
+
+    const rejectBtns = document.querySelectorAll('[data-action="reject"]');
+    rejectBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const orderId = this.getAttribute('data-order-id');
+        const reason = prompt('ระบุเหตุผลการปฏิเสธ:');
+        if (reason) {
+          rejectOrder(orderId, reason);
+          alert(`❌ ปฏิเสธ PO ${orderId} สำเร็จ!`);
+        }
+      });
+    });
+
+    // Confirm receipt button
+    const confirmBtns = document.querySelectorAll('[data-action="confirm-receipt"]');
+    confirmBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const orderId = this.getAttribute('data-order-id');
+        updateOrderStatus(orderId, 'received');
+        alert(`✅ ยืนยันการรับสินค้า PO ${orderId} สำเร็จ!`);
+      });
+    });
+
+    // Submit PO button
+    const submitBtns = document.querySelectorAll('[data-action="submit-po"]');
+    submitBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const orderId = this.getAttribute('data-order-id');
+        submitOrder(orderId);
+        alert(`✅ ส่ง PO ${orderId} ให้ Approver อนุมัติแล้ว!`);
+      });
+    });
+
+    // Search functionality
+    const searchInputs = document.querySelectorAll('[data-action="search"]');
+    searchInputs.forEach(input => {
+      input.addEventListener('keyup', function() {
+        const results = searchProducts(this.value);
+        console.log(`Found ${results.length} products matching: ${this.value}`);
+      });
+    });
+  });
+
+  // Quick notification badge update
+  function updateNotificationBadge() {
+    const badge = document.querySelector('.nav-badge');
+    const count = getUnreadCount();
+    if (badge && count > 0) {
+      badge.textContent = count;
+      badge.parentElement.style.display = 'block';
+    } else if (badge) {
+      badge.parentElement.style.display = 'none';
+    }
+  }
+
+  // Update badge on initialization
+  updateNotificationBadge();
+</script>
+
+</body>
+</html>
